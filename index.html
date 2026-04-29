@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tạo Avatar Frame Công Ty</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #071b4d, #123b8f);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 1100px;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 28px;
+      align-items: center;
+    }
+
+    .preview-card,
+    .control-card {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 24px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+      backdrop-filter: blur(14px);
+    }
+
+    .preview-card {
+      padding: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .control-card {
+      padding: 28px;
+    }
+
+    h1 {
+      font-size: 28px;
+      line-height: 1.25;
+      margin-bottom: 12px;
+    }
+
+    .desc {
+      font-size: 15px;
+      line-height: 1.6;
+      opacity: 0.9;
+      margin-bottom: 24px;
+    }
+
+    .canvas-wrap {
+      width: min(78vw, 620px);
+      aspect-ratio: 1 / 1;
+      position: relative;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 24px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: transparent;
+    }
+
+    .field {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    input[type="file"] {
+      width: 100%;
+      background: #fff;
+      color: #111;
+      border-radius: 12px;
+      padding: 12px;
+      cursor: pointer;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: #ffd166;
+    }
+
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    button {
+      border: none;
+      border-radius: 14px;
+      padding: 14px 18px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .primary {
+      background: #ffd166;
+      color: #071b4d;
+    }
+
+    .secondary {
+      background: rgba(255, 255, 255, 0.16);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.05);
+    }
+
+    .note {
+      margin-top: 18px;
+      font-size: 13px;
+      line-height: 1.5;
+      opacity: 0.82;
+    }
+
+    @media (max-width: 900px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .control-card {
+        order: -1;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="preview-card">
+      <div class="canvas-wrap">
+        <canvas id="avatarCanvas" width="1080" height="1080"></canvas>
+      </div>
+    </section>
+
+    <section class="control-card">
+      <h1>Tạo ảnh đại diện kỷ niệm 18 năm</h1>
+      <p class="desc">Tải ảnh cá nhân lên, kéo để căn chỉnh vị trí, phóng to/thu nhỏ cho vừa khung rồi tải ảnh về máy.</p>
+
+      <div class="field">
+        <label for="photoInput">1. Chọn ảnh cá nhân</label>
+        <input id="photoInput" type="file" accept="image/*" />
+      </div>
+
+      <div class="field">
+        <label for="zoomRange">2. Phóng to / thu nhỏ</label>
+        <input id="zoomRange" type="range" min="0.5" max="3" step="0.01" value="1" />
+      </div>
+
+      <div class="btn-row">
+        <button class="primary" id="downloadBtn">Tải ảnh avatar xuống</button>
+        <button class="secondary" id="resetBtn">Căn lại ảnh về giữa</button>
+      </div>
+
+      <p class="note">Lưu ý: hãy thay file <strong>frame.png</strong> bằng frame avatar của công ty. Frame cần là ảnh PNG có vùng giữa trong suốt để chèn ảnh cá nhân.</p>
+    </section>
+  </main>
+
+  <script>
+    const canvas = document.getElementById('avatarCanvas');
+    const ctx = canvas.getContext('2d');
+    const photoInput = document.getElementById('photoInput');
+    const zoomRange = document.getElementById('zoomRange');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    const frame = new Image();
+    frame.src = 'frame.png';
+
+    let userImg = null;
+    let scale = 1;
+    let baseScale = 1;
+    let offsetX = 0;
+    let offsetY = 0;
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+
+    function drawPlaceholder() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#f2f2f2';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#777';
+      ctx.font = '36px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('Tải ảnh cá nhân lên để bắt đầu', canvas.width / 2, canvas.height / 2);
+    }
+
+    function drawCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (userImg) {
+        const imgW = userImg.width * baseScale * scale;
+        const imgH = userImg.height * baseScale * scale;
+        const x = canvas.width / 2 - imgW / 2 + offsetX;
+        const y = canvas.height / 2 - imgH / 2 + offsetY;
+        ctx.drawImage(userImg, x, y, imgW, imgH);
+      } else {
+        ctx.fillStyle = '#f2f2f2';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      if (frame.complete) {
+        ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
+      }
+    }
+
+    frame.onload = drawCanvas;
+    frame.onerror = () => {
+      drawPlaceholder();
+      alert('Chưa tìm thấy file frame.png. Hãy đặt file frame cùng thư mục với file HTML này.');
+    };
+
+    photoInput.addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        userImg = new Image();
+        userImg.onload = () => {
+          baseScale = Math.max(canvas.width / userImg.width, canvas.height / userImg.height);
+          scale = 1;
+          zoomRange.value = 1;
+          offsetX = 0;
+          offsetY = 0;
+          drawCanvas();
+        };
+        userImg.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    zoomRange.addEventListener('input', () => {
+      scale = Number(zoomRange.value);
+      drawCanvas();
+    });
+
+    function getPointerPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: (clientX - rect.left) * (canvas.width / rect.width),
+        y: (clientY - rect.top) * (canvas.height / rect.height)
+      };
+    }
+
+    function startDrag(e) {
+      if (!userImg) return;
+      e.preventDefault();
+      const pos = getPointerPos(e);
+      isDragging = true;
+      startX = pos.x - offsetX;
+      startY = pos.y - offsetY;
+    }
+
+    function drag(e) {
+      if (!isDragging || !userImg) return;
+      e.preventDefault();
+      const pos = getPointerPos(e);
+      offsetX = pos.x - startX;
+      offsetY = pos.y - startY;
+      drawCanvas();
+    }
+
+    function endDrag() {
+      isDragging = false;
+    }
+
+    canvas.addEventListener('mousedown', startDrag);
+    canvas.addEventListener('mousemove', drag);
+    window.addEventListener('mouseup', endDrag);
+
+    canvas.addEventListener('touchstart', startDrag, { passive: false });
+    canvas.addEventListener('touchmove', drag, { passive: false });
+    window.addEventListener('touchend', endDrag);
+
+    resetBtn.addEventListener('click', () => {
+      scale = 1;
+      zoomRange.value = 1;
+      offsetX = 0;
+      offsetY = 0;
+      drawCanvas();
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      if (!userImg) {
+        alert('Vui lòng tải ảnh cá nhân lên trước.');
+        return;
+      }
+
+      const link = document.createElement('a');
+      link.download = 'avatar-frame-18-nam.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
+
+    drawCanvas();
+  </script>
+</body>
+</html>
